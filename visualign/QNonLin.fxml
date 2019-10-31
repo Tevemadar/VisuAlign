@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioMenuItem?>
+<?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="vbox" minHeight="600" minWidth="800" onKeyTyped="#keyTyped" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="visualign.QNLController">
+   <children>
+      <MenuBar>
+        <menus>
+          <Menu text="File">
+            <items>
+              <MenuItem onAction="#open" text="Open" />
+              <MenuItem onAction="#save" text="Save" />
+              <MenuItem onAction="#saveas" text="Save As..." />
+              <MenuItem onAction="#close" text="Close" />
+              <SeparatorMenuItem />
+              <MenuItem onAction="#exit" text="Exit" />
+            </items>
+          </Menu>
+          <Menu text="Edit">
+            <items>
+              <MenuItem text="Delete" />
+            </items>
+          </Menu>
+            <Menu text="View">
+               <items>
+                  <RadioMenuItem fx:id="debug" onAction="#debug" text="Debug" />
+               </items>
+            </Menu>
+          <Menu text="Help">
+            <items>
+              <MenuItem text="About" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+      <HBox alignment="CENTER_LEFT" VBox.vgrow="NEVER">
+         <children>
+            <ColorPicker fx:id="pinColor" onAction="#rePin" />
+            <Slider fx:id="opacitySlider" value="50.0" />
+            <ColorPicker fx:id="outColor" disable="${opacitySlider.value!=100.0}" onAction="#reOvly" />
+            <ColorPicker fx:id="debColor" disable="${!debug.selected}" onAction="#reDebug" />
+         </children>
+      </HBox>
+      <Pane fx:id="pane" onMouseDragged="#mouseDragged" onMouseMoved="#mouseMoved" onMousePressed="#mousePressed" VBox.vgrow="ALWAYS">
+         <children>
+            <Canvas fx:id="imgcnv" height="${pane.height}" width="${pane.width}" />
+            <Canvas fx:id="ovlycnv" height="${pane.height}" width="${pane.width}" />
+         </children>
+      </Pane>
+   </children>
+</VBox>
