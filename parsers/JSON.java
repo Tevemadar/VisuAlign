@@ -2,6 +2,7 @@ package parsers;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
@@ -94,34 +95,68 @@ public class JSON {
                     f.setDouble(target, (Double) v);
                 else if (v instanceof String)
                     f.set(target, v);
-                else if (v instanceof List)
+                else if (v instanceof List) {
+//                    mapList(v, f.get(target),
+//                            (Class<?>) ((ParameterizedType) f.getGenericType()).getActualTypeArguments()[0], resolver);
+                    
                     mapList(v, f.get(target),
-                            (Class<?>) ((ParameterizedType) f.getGenericType()).getActualTypeArguments()[0], resolver);
-                else if (v instanceof Map)
+                            ((ParameterizedType) f.getGenericType()).getActualTypeArguments()[0], resolver);
+                    
+//                    Object o=f.getType().getConstructor().newInstance();
+//                    mapList(v, o, ((ParameterizedType) f.getGenericType()).getActualTypeArguments()[0], resolver);
+//                    f.set(target, o);
+                    
+//                    ParameterizedType pt=(ParameterizedType)f.getGenericType();
+//                    System.out.println(pt.getActualTypeArguments()[0]);
+//                    String s=f.getGenericType().getTypeName();
+//                    System.out.println(s.substring(s.indexOf('<')+1,s.lastIndexOf('>')));
+//                    Class e=Class.forName()
+//                    mapList(v, o,
+//                            (Class<?>) ((ParameterizedType) f.getGenericType()).getActualTypeArguments()[0], resolver);
+//                    f.set(target, o);
+//                    System.out.println(f);
+//                    System.out.println(f.toGenericString());
+//                    System.out.println(f.getType());
+//                    System.out.println(f.getGenericType());
+                } else if (v instanceof Map) {
                     mapObject(v, f.get(target), resolver);
-                else
+                    
+//                    Object o=f.getType().getConstructor().newInstance();
+//                    mapObject(v, o, resolver);
+//                    f.set(target, o);
+                } else
                     throw new Exception(v.getClass() + " encountered");
             }
         }
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static void mapList(Object json, Object target, Class type, Map<String, String> resolver) throws Exception {
+//    public static void mapList(Object json, Object target, Class type, Map<String, String> resolver) throws Exception {
+    public static void mapList(Object json, Object target, Object type, Map<String, String> resolver) throws Exception {
         if (!(json instanceof List) || !(target instanceof List))
             throw new Exception("Lists expected, got " + json.getClass() + " and " + target.getClass());
         List ljson = (List) json;
         List ltarget = (List) target;
+        ltarget.clear();
+        Class ctype=type instanceof Class?(Class)type:null;
+        ParameterizedType ptype=type instanceof ParameterizedType?(ParameterizedType)type:null;
         for (int i = 0; i < ljson.size(); i++) {
             Object v = ljson.get(i);
-            if (ltarget.size() <= i)
+            if(v==null)
                 ltarget.add(null);
-            if (v != null) {
-                if (type.isInstance(v))
-                    ltarget.set(i, type.cast(v));
-                else {
-                    Object o = type.getDeclaredConstructor().newInstance();
-                    mapObject(v, o, resolver);
-                    ltarget.set(i, o);
+            else {
+                if (ctype != null) {
+                    if (ctype.isInstance(v))
+                        ltarget.add(ctype.cast(v));
+                    else {
+                        Object o = ctype.getDeclaredConstructor().newInstance();
+                        mapObject(v, o, resolver);
+                        ltarget.add(o);
+                    }
+                } else {
+                    Object o = ((Class)ptype.getRawType()).getDeclaredConstructor().newInstance();
+                    mapList(v, o, ptype.getActualTypeArguments()[0], resolver);
+                    ltarget.add(o);
                 }
             }
         }
@@ -188,5 +223,21 @@ public class JSON {
             sb.append((char) c);
         }
         return sb.toString();
+    }
+    
+    public static Writer writeString(String s,Writer w) throws IOException {
+        w.append('\"');
+        for(int i=0;i<s.length();i++) {
+            char c=s.charAt(i);
+            int pos=UNESCAPED.indexOf(c);
+            if(pos<0)
+                w.append(c);
+            else {
+                w.append('\\');
+                w.append(ESCAPED.charAt(pos));
+            }
+        }
+        w.append('\"');
+        return w;
     }
 }
