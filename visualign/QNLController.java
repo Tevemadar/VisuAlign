@@ -1,9 +1,13 @@
 package visualign;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,7 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-import data.Marker;
+import javax.imageio.ImageIO;
+
 import data.Palette;
 import data.SegLabel;
 import data.Series;
@@ -24,19 +29,24 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.control.Alert;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelWriter;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -44,6 +54,7 @@ import nonlin.Triangle;
 import parsers.ITKLabel;
 import parsers.JSON;
 import slicer.Int32Slices;
+import static data.Marker.marker;
 
 public class QNLController implements ChangeListener<Number> {
     @FXML
@@ -85,20 +96,21 @@ public class QNLController implements ChangeListener<Number> {
     }
 
     int pick = -1;
-    Marker picked;
+    List<Double> picked;
     double pickx;
     double picky;
 
     void updatePick() {
-        List<Marker> markers=slice.markers;
+        if(slice==null)return;
+        List<ArrayList<Double>> markers=slice.markers;
         pick = -1;
         picked = null;
         pickx = (mouseX - imgx) * slice.width / imgw;
         picky = (mouseY - imgy) * slice.height / imgh;
         double margin = slice.width * 10 / imgw;
         for (int i = markers.size() - 1; i >= 0; i--) {
-            Marker m = markers.get(i);
-            if (Math.abs(pickx - m.nx) < margin && Math.abs(picky - m.ny) < margin) {
+            List<Double> m = markers.get(i);
+            if (Math.abs(pickx - m.get(2)) < margin && Math.abs(picky - m.get(3)) < margin) {
                 pick = i;
                 picked = m;
                 break;
@@ -122,8 +134,8 @@ public class QNLController implements ChangeListener<Number> {
     void mousePressed(MouseEvent event) {
         updatePick();
         if (picked != null) {
-            basex = picked.nx;
-            basey = picked.ny;
+            basex = picked.get(2);
+            basey = picked.get(3);
         }
     }
 
@@ -131,20 +143,28 @@ public class QNLController implements ChangeListener<Number> {
     void mouseDragged(MouseEvent event) {
         mouseMoved(event);
         if (picked != null) {
-            picked.nx = basex + (mouseX - imgx) * slice.width / imgw - pickx;
-            picked.ny = basey + (mouseY - imgy) * slice.height / imgh - picky;
+            picked.set(2, basex + (mouseX - imgx) * slice.width / imgw - pickx);
+            picked.set(3, basey + (mouseY - imgy) * slice.height / imgh - picky);
             slice.triangulate();
             reDraw();
         }
     }
 
 //    List<Marker> markers = new ArrayList<Marker>();
+    @FXML
+    void keyPressed(KeyEvent event) {
+        KeyCode kc=event.getCode();
+        if(kc==KeyCode.LEFT)
+            spnVal.decrement(1);
+        if(kc==KeyCode.RIGHT)
+            spnVal.increment(1);
+    }
 
     @FXML
     void keyTyped(KeyEvent event) {
         if(slice==null)return;
         
-        List<Marker> markers=slice.markers;
+        List<ArrayList<Double>> markers=slice.markers;
         List<Triangle> triangles=slice.triangles;
 
         updatePick();
@@ -161,7 +181,7 @@ public class QNLController implements ChangeListener<Number> {
             for (int i = 0; i < triangles.size(); i++) {
                 double xy[] = triangles.get(i).transform(mx, my);
                 if (xy != null) {
-                    markers.add(new Marker(xy[0], xy[1], mx, my));
+                    markers.add(marker(xy[0], xy[1], mx, my));
                     found = true;
                     break;
                 }
@@ -382,10 +402,11 @@ public class QNLController implements ChangeListener<Number> {
 //                    if(o!=sample(x-1,y) || o!=sample(x,y-1))
 //                        pw.setArgb(imgx+x, imgy+y, a);
 //                }
-            IntStream.range(0, imgh).parallel().forEach(y -> {
-                for (int x = 1; x < imgw; x++) {
+            IntStream.range(1, imgh-1).parallel().forEach(y -> {
+                for (int x = 1; x < imgw-1; x++) {
                     int o = sample(x, y);
-                    if (o != sample(x - 1, y) || o != sample(x, y - 1))
+                    if (o != sample(x - 1, y) || o != sample(x, y - 1)
+                          || o != sample(x + 1, y) || o != sample(x, y + 1))
                         synchronized (pw) {
                             pw.setArgb(imgx + x, imgy + y, a);
                         }
@@ -397,15 +418,16 @@ public class QNLController implements ChangeListener<Number> {
     private void drawPins() {
         GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
         ctx.setStroke(pinColor.getValue());
-        List<Marker> markers=slice.markers;
+        ctx.setLineWidth(3);
+        List<ArrayList<Double>> markers=slice.markers;
         for (int i = 0; i < markers.size(); i++) {
-            Marker m = markers.get(i);
-            double nx = m.nx * imgw / slice.width + imgx;
-            double ny = m.ny * imgh / slice.height + imgy;
+            List<Double> m = markers.get(i);
+            double nx = m.get(2) * imgw / slice.width + imgx;
+            double ny = m.get(3) * imgh / slice.height + imgy;
             ctx.strokeLine(nx, ny - 10, nx, ny + 10);
             ctx.strokeLine(nx - 10, ny, nx + 10, ny);
-            double ox = m.ox * imgw / slice.width + imgx;
-            double oy = m.oy * imgh / slice.height + imgy;
+            double ox = m.get(0) * imgw / slice.width + imgx;
+            double oy = m.get(1) * imgh / slice.height + imgy;
             ctx.strokeLine(ox, oy, nx, ny);
         }
     }
@@ -413,15 +435,16 @@ public class QNLController implements ChangeListener<Number> {
     private void drawDebug() {
         GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
         ctx.setStroke(debColor.getValue());
+        ctx.setLineWidth(1);
         List<Triangle> triangles=slice.triangles;
         for (int i = 0; i < triangles.size(); i++) {
             Triangle t = triangles.get(i);
-            double ax = imgx + imgw * t.A.nx / slice.width;
-            double ay = imgy + imgh * t.A.ny / slice.height;
-            double bx = imgx + imgw * t.B.nx / slice.width;
-            double by = imgy + imgh * t.B.ny / slice.height;
-            double cx = imgx + imgw * t.C.nx / slice.width;
-            double cy = imgy + imgh * t.C.ny / slice.height;
+            double ax = imgx + imgw * t.A.get(2) / slice.width;
+            double ay = imgy + imgh * t.A.get(3) / slice.height;
+            double bx = imgx + imgw * t.B.get(2) / slice.width;
+            double by = imgy + imgh * t.B.get(3) / slice.height;
+            double cx = imgx + imgw * t.C.get(2) / slice.width;
+            double cy = imgy + imgh * t.C.get(3) / slice.height;
             ctx.strokeLine(ax, ay, bx, by);
             ctx.strokeLine(bx, by, cx, cy);
             ctx.strokeLine(cx, cy, ax, ay);
@@ -438,6 +461,7 @@ public class QNLController implements ChangeListener<Number> {
 
     }
 
+    String current;
     Palette palette;
     Int32Slices slicer;
     Path base;
@@ -446,7 +470,7 @@ public class QNLController implements ChangeListener<Number> {
     void open(ActionEvent event) throws Exception {
         FileChooser fc = new FileChooser();
         fc.setTitle("Pick JSON file");
-        ExtensionFilter ef=new ExtensionFilter("JSON files", "*.json");
+        ExtensionFilter ef=new ExtensionFilter("QuickNII JSON files", "*.json");
         fc.getExtensionFilters().add(ef);
         //fc.setSelectedExtensionFilter(ef);
         File f = fc.showOpenDialog(stage);
@@ -459,11 +483,25 @@ public class QNLController implements ChangeListener<Number> {
                 resolver.put("resolution", "target-resolution");
                 JSON.mapObject(JSON.parse(fr), series, resolver);
             }
+            if(series.slices.size()<1) {
+                series=null;
+                Alert a=new Alert(AlertType.ERROR, "This JSON file was not generated by QuickNII.", ButtonType.OK);
+                a.showAndWait();
+                return;
+            }
             series.propagate();
-            //!!
-            if(series.target.equals("WHS_Rat_v2_39um.cutlas")) {
-                palette=ITKLabel.parseLabels("C:\\BigNII\\temp\\WHS_SD_rat_atlas_v3.label");
-                slicer=new Int32Slices("C:\\BigNII\\temp\\WHS_SD_rat_atlas_v3.nii");
+            if(series.target==null) {
+                DirectoryChooser dc=new DirectoryChooser();
+                dc.setTitle("Old series data, please select an atlas folder from QNonLin");
+                dc.setInitialDirectory(new File(System.getProperty("java.home")));
+                File d=dc.showDialog(stage);
+                if(d==null)return;
+                series.target=d.getName();
+            }
+            if(current==null || !current.equals(series.target)) {
+                current=series.target;
+                palette=ITKLabel.parseLabels(current+File.separator+"labels.txt");
+                slicer=new Int32Slices(current+File.separator+"labels.nii.gz");
             }
             spnVal.setMin(1);
             spnVal.setMax(series.slices.size());
@@ -475,6 +513,7 @@ public class QNLController implements ChangeListener<Number> {
     void loadView() {
         slice=series.slices.get(spnVal.getValue()-1);
         image=new Image("file:"+base.resolve(slice.filename));
+        stage.setTitle("VisuAlign - NonLinear: "+slice.filename);
         drawImage();
         
         Double ouv[]=slice.anchoring.toArray(new Double[0]);
@@ -501,8 +540,62 @@ public class QNLController implements ChangeListener<Number> {
 
     }
     @FXML
-    void exprt(ActionEvent event) {
-
+    void exprt(ActionEvent event) throws IOException {
+        DirectoryChooser dc=new DirectoryChooser();
+        dc.setTitle("Pick folder for exporting slices");
+        File f=dc.showDialog(stage);
+        if(f!=null) {
+            List<Slice> slices=series.slices;
+            int count=0;
+            for(int i=0;i<slices.size();i++) {
+                Slice slice=slices.get(i);
+                if(slice.markers.size()>0) {
+                    count++;
+                    String name=slice.filename.substring(0, slice.filename.lastIndexOf('.'));
+                    Double ouv[]=slice.anchoring.toArray(new Double[0]);
+                    int overlay[][]=slicer.getInt32Slice(ouv[0], ouv[1], ouv[2], ouv[3], ouv[4], ouv[5], ouv[6], ouv[7], ouv[8], false);
+                    slice.triangulate();
+                    List<Triangle> triangles=slice.triangles;
+                    int h=overlay.length;
+                    int w=overlay[0].length;
+                    byte rgb[]=new byte[w*h*3];
+                    try(DataOutputStream dos=new DataOutputStream(new BufferedOutputStream(new FileOutputStream(f+File.separator+name+"_nl.flat")))){
+                        boolean byt=palette.fastcolors.length<=256;
+                        dos.writeByte(byt?1:2);
+                        dos.writeInt(w);
+                        dos.writeInt(h);
+                        for(int y=0;y<h;y++)
+                            for(int x=0;x<w;x++) {
+//                                SegLabel c=palette.fullmap.get(overlay[y][x]);
+                                SegLabel c=palette.fullmap.get(0);
+                                double fx = x * slice.width / w;
+                                double fy = y * slice.height / h;
+                                for (int j = 0; j < triangles.size(); j++) {
+                                    double t[] = triangles.get(j).transform(fx, fy);
+                                    if (t != null) {
+                                        int xx = (int) (t[0] * w / slice.width);
+                                        int yy = (int) (t[1] * h / slice.height);
+                                        c=palette.fullmap.get(overlay[yy][xx]);
+                                        break;
+                                    }
+                                }
+                                rgb[(x+y*w)*3]=(byte)c.red;
+                                rgb[(x+y*w)*3+1]=(byte)c.green;
+                                rgb[(x+y*w)*3+2]=(byte)c.blue;
+                                if(byt)
+                                    dos.writeByte(c.remap);
+                                else
+                                    dos.writeShort(c.remap);
+                            }
+                    }
+                    BufferedImage bi=new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+                    bi.getRaster().setDataElements(0, 0, w, h, rgb);
+                    ImageIO.write(bi, "png", new File(f+File.separator+name+"_nl.png"));
+                }
+            }
+            Alert a=new Alert(AlertType.INFORMATION, "Done. "+(count==0?"No":count)+" non-linear segmentation"+(count!=1?"s":"")+" exported.");
+            a.showAndWait();
+        }
     }
 
     @FXML
@@ -542,7 +635,7 @@ public class QNLController implements ChangeListener<Number> {
     
     @FXML
     void goFirst(ActionEvent event) {
-        if(series==null)return;
+//        if(series==null)return;
         spnVal.setValue(1);
     }
     
@@ -554,15 +647,28 @@ public class QNLController implements ChangeListener<Number> {
     
     @FXML
     void less10(ActionEvent event) {
-        if(series==null)return;
+//        if(series==null)return;
         spnVal.decrement(10);
     }
     
     @FXML
     void more10(ActionEvent event) {
-        if(series==null)return;
+//        if(series==null)return;
         spnVal.increment(10);
     }
 
+    @FXML
+    void clear(ActionEvent event) {
+        if(series==null)return;
+        Alert a=new Alert(AlertType.WARNING,"Proceed with dropping all markers from current section?",ButtonType.YES,ButtonType.NO);
+        a.showAndWait().ifPresent(b->{
+            if(b==ButtonType.YES) {
+                slice.markers.clear();
+                slice.triangulate();
+                reDraw();
+            }
+        });
+    }
+    
     Stage stage;
 }

@@ -57,10 +57,11 @@ public class Series {
                 for (int i = 0; i < linints.length; i++)
                     linints[i] = new LinInter(prevs.nr, prevs.anchoring.get(i), nexts.nr, nexts.anchoring.get(i));
                 for (int i = start; i < next; i++) {
-                    Slice s = slices.get(i);
-                    for (int j = 0; j < linints.length; j++)
-                        s.anchoring.add(linints[j].get(s.nr));
-                    count++;
+                    slices.get(i).from(linints);
+//                    Slice s = slices.get(i);
+//                    for (int j = 0; j < linints.length; j++)
+//                        s.anchoring.add(linints[j].get(s.nr));
+                    count++; //??
                 }
                 start = next + 1;
             }

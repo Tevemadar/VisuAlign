@@ -1,25 +1,17 @@
 package data;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class Marker {
-    public double ox,oy,nx,ny;
-    public Marker() {}
-    public Marker(double ox,double oy,double nx,double ny) {
-        this.ox=ox;
-        this.oy=oy;
-        this.nx=nx;
-        this.ny=ny;
-    }
-    public Marker(double x,double y) {
-        ox=nx=x;
-        oy=ny=y;
-    }
-    
-//    @Override
-//    public String toString() {
-//        return String.format("(%f,%f -> %f,%f)", ox,oy,nx,ny);
+    private Marker() {}
+//    public static ArrayList<Double> tuple(Double ...doubles){
+//        return new ArrayList<Double>(Arrays.asList(doubles));
 //    }
-    public String toString() {
-//        return String.format("{\"ox\":%f,\"oy\":%f,\"nx\":%f,\"ny\":%f}", ox,oy,nx,ny);
-        return "{\"ox\":"+ox+",\"oy\":"+oy+",\"nx\":"+nx+",\"ny\":"+ny+"}";
+    public static ArrayList<Double> marker(double ox,double oy,double nx,double ny){
+        return new ArrayList<>(Arrays.asList(ox,oy,nx,ny));
+    }
+    public static ArrayList<Double> marker(double x,double y){
+        return new ArrayList<>(Arrays.asList(x,y,x,y));
     }
 }

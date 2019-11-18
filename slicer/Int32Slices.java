@@ -1,11 +1,14 @@
 package slicer;
 
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
+import java.util.zip.GZIPInputStream;
 
 import nii.Nifti1Dataset;
 
@@ -43,11 +46,18 @@ public class Int32Slices {
         YDIM = n1d.YDIM;
         ZDIM = n1d.ZDIM;
 
-        try(RandomAccessFile raf=new RandomAccessFile(n1d.ds_datname,"r");
-                FileChannel fc=raf.getChannel()){
-            blob=fc.map(MapMode.READ_ONLY, (long)n1d.vox_offset, raf.length()-(long)n1d.vox_offset);
-            blob.order(n1d.big_endian?ByteOrder.BIG_ENDIAN:ByteOrder.LITTLE_ENDIAN);
+//        try(RandomAccessFile raf=new RandomAccessFile(n1d.ds_datname,"r");
+//                FileChannel fc=raf.getChannel()){
+//            blob=fc.map(MapMode.READ_ONLY, (long)n1d.vox_offset, raf.length()-(long)n1d.vox_offset);
+//            blob.order(n1d.big_endian?ByteOrder.BIG_ENDIAN:ByteOrder.LITTLE_ENDIAN);
+//        }
+        byte bytes[]=new byte[XDIM*YDIM*ZDIM*BPV];
+        try(DataInputStream dis=new DataInputStream(new GZIPInputStream(new FileInputStream(aNiftiFile)))) {
+            dis.skipBytes((int)n1d.vox_offset);
+            dis.readFully(bytes);
         }
+        blob=ByteBuffer.wrap(bytes);
+        blob.order(n1d.big_endian?ByteOrder.BIG_ENDIAN:ByteOrder.LITTLE_ENDIAN);
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.List;
 
 import math.Estimator;
 import nonlin.Triangle;
+import static data.Marker.marker;
 
 public class Slice implements Comparable<Slice> {
     public String filename;
@@ -12,31 +13,31 @@ public class Slice implements Comparable<Slice> {
     public double width;
     public double height;
     public List<Double> anchoring = new ArrayList<>();
-    public List<Marker> markers = new ArrayList<>();
+    public List<ArrayList<Double>> markers = new ArrayList<>();
     
     public String toString() {
-        return "{\"filename\":\""+filename+"\",\"nr\":"+(int)nr+",\"width\":"+(int)width+",\"height\":"+(int)height
-                +",\"anchoring\":"+anchoring+(markers.size()>0?",\"markers\":"+markers:"")+"}";
+        return "\n{\"filename\":\""+filename+"\",\"nr\":"+(int)nr+",\"width\":"+(int)width+",\"height\":"+(int)height
+                +(noanchoring?"":",\"anchoring\":"+anchoring)+(markers.size()>0?",\"markers\":"+markers:"")+"}";
     }
     
-    public List<Marker> trimarkers;
+    public List<List<Double>> trimarkers;
     public List<Triangle> triangles;
     
     public void triangulate() {
         long start=System.currentTimeMillis();
         trimarkers=new ArrayList<>();
-        trimarkers.add(new Marker(0, 0));
-        trimarkers.add(new Marker(width, 0));
-        trimarkers.add(new Marker(0, height));
-        trimarkers.add(new Marker(width, height));
+        trimarkers.add(marker(0,0));
+        trimarkers.add(marker(width, 0));
+        trimarkers.add(marker(0, height));
+        trimarkers.add(marker(width, height));
         triangles = new ArrayList<Triangle>();
         triangles.add(new Triangle(0, 1, 2, trimarkers));
         triangles.add(new Triangle(1, 2, 3, trimarkers));
         for (int i = 0; i < markers.size() && System.currentTimeMillis()<start+5000; i++) {
-            Marker m = markers.get(i);
+            List<Double> m = markers.get(i);
             trimarkers.add(m);
-            double x = m.nx;
-            double y = m.ny;
+            double x = m.get(2);
+            double y = m.get(3);
             boolean found = false;
             for (int t = 0; t < triangles.size(); t++) {
                 Triangle tri = triangles.get(t);
@@ -57,8 +58,8 @@ public class Slice implements Comparable<Slice> {
                     Triangle tri = triangles.get(t);
                     for (int j = 0; j < trimarkers.size() && !flip; j++)
                         if (j != tri.a && j != tri.b && j != tri.c) {
-                            Marker P = trimarkers.get(j);
-                            if (tri.incirc(P.nx, P.ny)) {
+                            List<Double> P = trimarkers.get(j);
+                            if (tri.incirc(P.get(2), P.get(3))) {
                                 Triangle ta = new Triangle(j, tri.b, tri.c, trimarkers);
                                 int idx = triangles.indexOf(ta);
                                 if (idx >= 0) {
@@ -143,8 +144,10 @@ public class Slice implements Comparable<Slice> {
         return false;
     }
 
+    public boolean noanchoring;
     public boolean from(Estimator ests[]) {
         if (anchoring.size() == 0) {
+            noanchoring=true;
             for (int i = 0; i < ests.length; i++)
                 anchoring.add(ests[i].get(nr));
             orthonormalize();

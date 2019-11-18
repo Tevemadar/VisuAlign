@@ -3,13 +3,12 @@ package nonlin;
 import java.util.Arrays;
 import java.util.List;
 
-import data.Marker;
 import math.Matrix3;
 
 public class Triangle {
 //    final List<Point> points;// = new ArrayList<>();
     public final int a, b, c;
-    public final Marker A,B,C;
+    public final List<Double> A,B,C;
 //    public final Point A,B,C;
 //    public final double ax,ay,bx,by,cx,cy;
     public final double minx,miny,maxx,maxy;
@@ -18,7 +17,7 @@ public class Triangle {
     
     public final double den,Mdenx,Mdeny,r2den;
         
-    public Triangle(int a,int b,int c,List<Marker> points) {
+    public Triangle(int a,int b,int c,List<List<Double>> points) {
 //        this.points=points;
         int p[]=new int[] {a,b,c};
         Arrays.sort(p);
@@ -26,14 +25,14 @@ public class Triangle {
         this.b=p[1];
         this.c=p[2];
         A=points.get(this.a);
-        double ax=A.nx;
-        double ay=A.ny;
+        double ax=A.get(2);
+        double ay=A.get(3);
         B=points.get(this.b);
-        double bx=B.nx;
-        double by=B.ny;
+        double bx=B.get(2);
+        double by=B.get(3);
         C=points.get(this.c);
-        double cx=C.nx;
-        double cy=C.ny;
+        double cx=C.get(2);
+        double cy=C.get(3);
         minx=Math.min(ax,Math.min(bx, cx));
         miny=Math.min(ay,Math.min(by, cy));
         maxx=Math.max(ax,Math.max(bx, cx));
@@ -78,7 +77,7 @@ public class Triangle {
     public double[] transform(double x,double y) {
         var uv1=intri(x,y);
         if(uv1==null)return null;
-        return new double[] {A.ox+(B.ox-A.ox)*uv1[0]+(C.ox-A.ox)*uv1[1],A.oy+(B.oy-A.oy)*uv1[0]+(C.oy-A.oy)*uv1[1]};
+        return new double[] {A.get(0)+(B.get(0)-A.get(0))*uv1[0]+(C.get(0)-A.get(0))*uv1[1],A.get(1)+(B.get(1)-A.get(1))*uv1[0]+(C.get(1)-A.get(1))*uv1[1]};
     }
     
     public double[] intri(double x,double y) {
