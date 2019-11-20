@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -547,6 +548,9 @@ public class QNLController implements ChangeListener<Number> {
         if(f!=null) {
             List<Slice> slices=series.slices;
             int count=0;
+            try(PrintWriter pw=new PrintWriter(f+File.separator+"report.tsv")){
+//                pw.println("snr\tname\twidth\theight\ttotal\tsegmented\tcoverage%\tchanged\tchanged%");
+                pw.println("snr\tname\tsegmented\tchanged\tstable%");
             for(int i=0;i<slices.size();i++) {
                 Slice slice=slices.get(i);
                 if(slice.markers.size()>0) {
@@ -559,6 +563,8 @@ public class QNLController implements ChangeListener<Number> {
                     int h=overlay.length;
                     int w=overlay[0].length;
                     byte rgb[]=new byte[w*h*3];
+                    int segmented=0;
+                    int changed=0;
                     try(DataOutputStream dos=new DataOutputStream(new BufferedOutputStream(new FileOutputStream(f+File.separator+name+"_nl.flat")))){
                         boolean byt=palette.fastcolors.length<=256;
                         dos.writeByte(byt?1:2);
@@ -586,12 +592,21 @@ public class QNLController implements ChangeListener<Number> {
                                     dos.writeByte(c.remap);
                                 else
                                     dos.writeShort(c.remap);
+                                if(overlay[y][x]!=0 || c.index!=0)
+                                    segmented++;
+                                if(overlay[y][x]!=c.index)
+                                    changed++;
                             }
+//                        pw.println((int)slice.nr+"\t"+slice.filename+"\t"+overlay[0].length+"\t"+overlay.length+"\t"+
+//                            overlay[0].length*overlay.length+"\t"+segmented+"\t"+segmented*100/overlay[0].length/overlay.length+"%\t"+
+//                            changed+"\t"+changed*100/segmented+"%");
+                        pw.println((int)slice.nr+"\t"+slice.filename+"\t"+segmented+"\t"+changed+"\t"+(segmented-changed)*100/segmented+"%");
                     }
                     BufferedImage bi=new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
                     bi.getRaster().setDataElements(0, 0, w, h, rgb);
                     ImageIO.write(bi, "png", new File(f+File.separator+name+"_nl.png"));
                 }
+            }
             }
             Alert a=new Alert(AlertType.INFORMATION, "Done. "+(count==0?"No":count)+" non-linear segmentation"+(count!=1?"s":"")+" exported.");
             a.showAndWait();
