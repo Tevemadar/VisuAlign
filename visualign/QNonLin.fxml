@@ -71,11 +71,13 @@
             <Region HBox.hgrow="ALWAYS" />
             <Button onAction="#goFirst" text="|&lt;&lt;" />
             <Button onAction="#less10" text="&lt; 10 &lt;" />
-            <Spinner fx:id="spn" prefWidth="60.0">
+            <Button onAction="#less" text="&lt;" />
+            <Spinner fx:id="spn" prefWidth="40.0">
                 <valueFactory>
                     <SpinnerValueFactory.IntegerSpinnerValueFactory fx:id="spnVal" max="1" min="1" />
                 </valueFactory>
             </Spinner>
+            <Button onAction="#more" text="&gt;" />
             <Button onAction="#more10" text="&gt; 10 &gt;" />
             <Button onAction="#goLast" text="&gt;&gt;|" />
             <Label text=" of " /><Label text="${spnVal.max}" /><Label text=" " />

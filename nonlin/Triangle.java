@@ -87,6 +87,24 @@ public class Triangle {
         return uv1;
     }
     
+//    public double[] transform(double x,double y) {
+//        if(x<minx || x>maxx || y<miny || y>maxy)return null;
+//        double a=decomp.x(x, y);
+//        if(a<0 || a>1)return null;
+//        double b=decomp.y(x, y);
+//        if(b<0 || b>1 || a+b>1)return null;
+//        return new double[] {A.get(0)+(B.get(0)-A.get(0))*a+(C.get(0)-A.get(0))*b,A.get(1)+(B.get(1)-A.get(1))*a+(C.get(1)-A.get(1))*b};
+//    }
+//    
+//    public boolean intri(double x,double y) {
+//        if(x<minx || x>maxx || y<miny || y>maxy)return false;
+//        double a=decomp.x(x, y);
+//        if(a<0 || a>1)return false;
+//        double b=decomp.y(x, y);
+//        if(b<0 || b>1 || a+b>1)return false;
+//        return true;
+//    }
+    
 //    @Override
 //    public String toString() {
 //        return a+"-"+b+"-"+c+" / "+points.get(a)+"-"+points.get(b)+"-"+points.get(c);

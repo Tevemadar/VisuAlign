@@ -24,7 +24,7 @@ public class Slice implements Comparable<Slice> {
     public List<Triangle> triangles;
     
     public void triangulate() {
-        long start=System.currentTimeMillis();
+//        long start=System.currentTimeMillis();
         trimarkers=new ArrayList<>();
         trimarkers.add(marker(0,0));
         trimarkers.add(marker(width, 0));
@@ -33,7 +33,8 @@ public class Slice implements Comparable<Slice> {
         triangles = new ArrayList<Triangle>();
         triangles.add(new Triangle(0, 1, 2, trimarkers));
         triangles.add(new Triangle(1, 2, 3, trimarkers));
-        for (int i = 0; i < markers.size() && System.currentTimeMillis()<start+5000; i++) {
+//        for (int i = 0; i < markers.size() && System.currentTimeMillis()<start+5000; i++) {
+        for (int i = 0; i < markers.size(); i++) {
             List<Double> m = markers.get(i);
             trimarkers.add(m);
             double x = m.get(2);
@@ -41,7 +42,8 @@ public class Slice implements Comparable<Slice> {
             boolean found = false;
             for (int t = 0; t < triangles.size(); t++) {
                 Triangle tri = triangles.get(t);
-                if (tri.intri(x, y) != null) {
+//                if (tri.intri(x, y) != null) {
+                if (tri.intri(x, y)!=null) {
                     triangles.set(t, new Triangle(i+4, tri.a, tri.b, trimarkers));
                     triangles.add(new Triangle(i+4, tri.a, tri.c, trimarkers));
                     triangles.add(new Triangle(i+4, tri.b, tri.c, trimarkers));
@@ -87,9 +89,80 @@ public class Slice implements Comparable<Slice> {
                             }
                         }
                 }
-            } while (flip && System.currentTimeMillis()<start+5000);
+//            } while (flip && System.currentTimeMillis()<start+5000);
+            } while (flip);
         }
     }
+    
+//    public void triangulate() {
+//        trimarkers=new ArrayList<>();
+//        trimarkers.add(marker(0,0));
+//        trimarkers.add(marker(width, 0));
+//        trimarkers.add(marker(0, height));
+//        trimarkers.add(marker(width, height));
+//        triangles = new ArrayList<Triangle>();
+//        triangles.add(new Triangle(0, 1, 2, trimarkers));
+//        triangles.add(new Triangle(1, 2, 3, trimarkers));
+//        for (int i = 0; i < markers.size(); i++) {
+//            List<Double> m = markers.get(i);
+//            trimarkers.add(m);
+//            double x = m.get(2);
+//            double y = m.get(3);
+//            boolean found = false;
+//            for (int t = 0; t < triangles.size(); t++) {
+//                Triangle tri = triangles.get(t);
+//                if (tri.intri(x, y) != null) {
+//                    triangles.set(t, new Triangle(i+4, tri.a, tri.b, trimarkers));
+//                    triangles.add(new Triangle(i+4, tri.a, tri.c, trimarkers));
+//                    triangles.add(new Triangle(i+4, tri.b, tri.c, trimarkers));
+//                    found = true;
+//                    break;
+//                }
+//            }
+////            if (!found)
+////                throw new RuntimeException();
+////            if(found) {
+////                
+////            }
+////            boolean flip;
+////            do {
+////                flip = false;
+////                for (int t = 0; t < triangles.size() && !flip; t++) {
+////                    Triangle tri = triangles.get(t);
+////                    for (int j = 0; j < trimarkers.size() && !flip; j++)
+////                        if (j != tri.a && j != tri.b && j != tri.c) {
+////                            List<Double> P = trimarkers.get(j);
+////                            if (tri.incirc(P.get(2), P.get(3))) {
+////                                Triangle ta = new Triangle(j, tri.b, tri.c, trimarkers);
+////                                int idx = triangles.indexOf(ta);
+////                                if (idx >= 0) {
+////                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
+////                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
+////                                    flip = true;
+////                                    break;
+////                                }
+////                                Triangle tb = new Triangle(tri.a, j, tri.c, trimarkers);
+////                                idx = triangles.indexOf(tb);
+////                                if (idx >= 0) {
+////                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
+////                                    triangles.set(idx, new Triangle(j, tri.b, tri.c, trimarkers));
+////                                    flip = true;
+////                                    break;
+////                                }
+////                                Triangle tc = new Triangle(tri.a, tri.b, j, trimarkers);
+////                                idx = triangles.indexOf(tc);
+////                                if (idx >= 0) {
+////                                    triangles.set(t, new Triangle(j, tri.b, tri.c, trimarkers));
+////                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
+////                                    flip = true;
+////                                    break;
+////                                }
+////                            }
+////                        }
+////                }
+////            } while (flip && System.currentTimeMillis()<start+5000);
+//        }
+//    }
 
     @Override
     public int compareTo(Slice s) {

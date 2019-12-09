@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import data.Palette;
 import data.SegLabel;
 import data.Series;
 import data.Slice;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -40,6 +42,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -196,6 +199,9 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     void initialize() throws Exception {
+        spn.getStyleClass().clear(); //!!
+//        spn.getStyleableNode().setStyle("-fx-text-alignment: center;");
+        
 //        markers.add(new Marker(0, 0));
 //        markers.add(new Marker(slice.width, 0));
 //        markers.add(new Marker(0, slice.height));
@@ -237,7 +243,7 @@ public class QNLController implements ChangeListener<Number> {
 
     Series series;
     Slice slice;
-
+    
     @Override
     public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
         if(arg0==spnVal.valueProperty()) {
@@ -251,6 +257,8 @@ public class QNLController implements ChangeListener<Number> {
 
     private Image image;
     int imgx, imgy, imgw, imgh;
+    int rgb[];
+    int nlovly[];
 
     int x_overlay[][];
     int fastoverlay[];
@@ -274,6 +282,9 @@ public class QNLController implements ChangeListener<Number> {
             imgh = ch;
             imgx = (cw - imgw) / 2;
         }
+        
+        rgb=new int[imgw*imgh];
+        nlovly=new int[imgw*imgh];
 
         GraphicsContext ctx = imgcnv.getGraphicsContext2D();
         ctx.clearRect(0, 0, cw, ch);
@@ -377,43 +388,42 @@ public class QNLController implements ChangeListener<Number> {
     }
 
     public void drawOvly() {
-        GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
-        ctx.clearRect(0, 0, imgcnv.getWidth(), imgcnv.getHeight());
-        PixelWriter pw = ctx.getPixelWriter();
-
+        Arrays.fill(rgb, 0);
+        IntStream.range(0, imgh).parallel().forEach(y -> {
+            for (int x = 0; x < imgw; x++)
+                nlovly[x+y*imgw]= sample(x, y);
+        });
+        
         int op = (int) opacitySlider.getValue() * 255 / 100;
         if (op < 255) {
             int a = op << 24;
             IntStream.range(0, imgh).parallel().forEach(y -> {
                 for (int x = 0; x < imgw; x++) {
-                    int o = sample(x, y);
-                    if (o != 0)
-                        synchronized (pw) {
-                            pw.setArgb(imgx + x, imgy + y, a + palette.fastcolors[o]);
-                        }
+                    int o = nlovly[x+y*imgw];
+                    if(o!=0)
+                        rgb[x+y*imgw]=a+palette.fastcolors[o];
                 }
             });
         } else {
             Color c = outColor.getValue();
             int a = 0xFF000000 + ((int) (c.getRed() * 255) << 16) + ((int) (c.getGreen() * 255) << 8)
                     + (int) (c.getBlue() * 255);
-//            for(int y=1;y<imgh;y++)
-//                for(int x=1;x<imgw;x++) {
-//                    int o=sample(x,y);
-//                    if(o!=sample(x-1,y) || o!=sample(x,y-1))
-//                        pw.setArgb(imgx+x, imgy+y, a);
-//                }
-            IntStream.range(1, imgh-1).parallel().forEach(y -> {
+//            IntStream.range(1, imgh-1).parallel().forEach(y -> {
+            for(int y=1; y<imgh-1;y++)
                 for (int x = 1; x < imgw-1; x++) {
-                    int o = sample(x, y);
-                    if (o != sample(x - 1, y) || o != sample(x, y - 1)
-                          || o != sample(x + 1, y) || o != sample(x, y + 1))
-                        synchronized (pw) {
-                            pw.setArgb(imgx + x, imgy + y, a);
-                        }
+                    int o=nlovly[x+y*imgw];
+                    if(nlovly[x+y*imgw-1] != o
+                    || nlovly[x+y*imgw+1] != o
+                    || nlovly[x+y*imgw-imgw] != o
+                    || nlovly[x+y*imgw+imgw] != o)
+                    rgb[x+y*imgw]= a;
                 }
-            });
+//            });
         }
+        GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
+        ctx.clearRect(0, 0, imgcnv.getWidth(), imgcnv.getHeight());
+        PixelWriter pw = ctx.getPixelWriter();
+        pw.setPixels(imgx,imgy,imgw,imgh,PixelFormat.getIntArgbInstance(),rgb,0,imgw);
     }
 
     private void drawPins() {
@@ -504,6 +514,11 @@ public class QNLController implements ChangeListener<Number> {
                 palette=ITKLabel.parseLabels(current+File.separator+"labels.txt");
                 slicer=new Int32Slices(current+File.separator+"labels.nii.gz");
             }
+            if(series.resolution.size()==0) {
+                series.resolution.add((double)slicer.XDIM);
+                series.resolution.add((double)slicer.YDIM);
+                series.resolution.add((double)slicer.ZDIM);
+            }
             spnVal.setMin(1);
             spnVal.setMax(series.slices.size());
             spnVal.setValue(spnVal.getMax()/2);
@@ -511,11 +526,55 @@ public class QNLController implements ChangeListener<Number> {
         }
     }
     
+//    boolean lockload; //!!
     void loadView() {
+//        if(lockload)return;
+//        lockload=true;
+//        spn.setDisable(true);
+//        int temp=spnVal.getValue();
         slice=series.slices.get(spnVal.getValue()-1);
         image=new Image("file:"+base.resolve(slice.filename));
         stage.setTitle("VisuAlign - NonLinear: "+slice.filename);
         drawImage();
+        
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                Double ouv[]=slice.anchoring.toArray(new Double[0]);
+//                x_overlay=slicer.getInt32Slice(ouv[0], ouv[1], ouv[2], ouv[3], ouv[4], ouv[5], ouv[6], ouv[7], ouv[8], false);
+//                fastoverlay=new int[x_overlay.length*x_overlay[0].length];
+//                for(int y=0;y<x_overlay.length;y++) {
+//                    int l[]=x_overlay[y];
+//                    for(int x=0;x<l.length;x++)
+//                        fastoverlay[x+y*l.length]=palette.fullmap.get(l[x]).remap;
+//                }
+//                slice.triangulate();
+//                Platform.runLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        reDraw();
+//                        //spn.setDisable(false);
+//                        spnVal.setValue(temp);
+//                        lockload=false;
+//                    }
+//                });
+//            }
+//        }).start();
+        
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                Thread.sleep(1000);
+//                }catch(Exception ex) {}
+//                Platform.runLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        vbox.setDisable(false);
+//                    }
+//                });
+//            }
+//        }).start();
         
         Double ouv[]=slice.anchoring.toArray(new Double[0]);
         x_overlay=slicer.getInt32Slice(ouv[0], ouv[1], ouv[2], ouv[3], ouv[4], ouv[5], ouv[6], ouv[7], ouv[8], false);
@@ -526,12 +585,6 @@ public class QNLController implements ChangeListener<Number> {
                 fastoverlay[x+y*l.length]=palette.fullmap.get(l[x]).remap;
         }
         
-//        slice.width=s.width;
-//        slice.height=s.height;
-//        markers.add(new Marker(0, 0));
-//        markers.add(new Marker(slice.width, 0));
-//        markers.add(new Marker(0, slice.height));
-//        markers.add(new Marker(slice.width, slice.height));
         slice.triangulate();
         reDraw();
     }
@@ -658,6 +711,18 @@ public class QNLController implements ChangeListener<Number> {
     void goLast(ActionEvent event) {
         if(series==null)return;
         spnVal.setValue(series.slices.size());
+    }
+    
+    @FXML
+    void less(ActionEvent event) {
+//        if(series==null)return;
+        spnVal.decrement(1);
+    }
+    
+    @FXML
+    void more(ActionEvent event) {
+//        if(series==null)return;
+        spnVal.increment(1);
     }
     
     @FXML

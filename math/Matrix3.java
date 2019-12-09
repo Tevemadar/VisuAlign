@@ -32,4 +32,11 @@ public class Matrix3 {
                 ret[i]+=row[j]*m[j][i];
         return ret;
     }
+    
+//    public double x(double x,double y) {
+//        return x*m[0][0]+y*m[1][0]+m[2][0];
+//    }
+//    public double y(double x,double y) {
+//        return x*m[0][1]+y*m[1][1]+m[2][1];
+//    }
 }

@@ -38,26 +38,34 @@ public class JSON {
             return Boolean.FALSE;
         if (token.equals(S_ARRAY_START)) {
             List<Object> array = new ArrayList<>();
-            do {
-                array.add(parse(jr));
-                token = jr.readToken();
-            } while (token.equals(S_COMMA));
-            if (!token.equals(S_ARRAY_END))
-                throw new IOException("Unexpected " + token + " in array"); // !!
+            if(jr.c==']') { //!!
+                jr.readToken();
+            } else {
+                do {
+                    array.add(parse(jr));
+                    token = jr.readToken();
+                } while (token.equals(S_COMMA));
+                if (!token.equals(S_ARRAY_END))
+                    throw new IOException("Unexpected " + token + " in array"); // !!
+            }
             return array;
         }
         if (token.equals(S_OBJECT_START)) {
             Map<String, Object> object = new LinkedHashMap<>();
-            do {
-                String key = dequote(jr.readToken());
-                token = jr.readToken();
-                if (!token.equals(S_COLON))
-                    throw new IOException("Unexpected " + token + " in object");
-                object.put(key, parse(jr));
-                token = jr.readToken();
-            } while (token.equals(S_COMMA));
-            if (!token.equals(S_OBJECT_END))
-                throw new IOException("Unexpected " + token + " in object"); // !!
+            if(jr.c=='}') { //!!
+                jr.readToken();
+            } else {
+                do {
+                    String key = dequote(jr.readToken());
+                    token = jr.readToken();
+                    if (!token.equals(S_COLON))
+                        throw new IOException("Unexpected " + token + " in object");
+                    object.put(key, parse(jr));
+                    token = jr.readToken();
+                } while (token.equals(S_COMMA));
+                if (!token.equals(S_OBJECT_END))
+                    throw new IOException("Unexpected " + token + " in object"); // !!
+            }
             return object;
         }
         if (CHARTOKEN.indexOf(token) != -1)
@@ -191,6 +199,9 @@ public class JSON {
 
         if (CHARTOKEN.indexOf(c) != -1) {
             c = r.read();
+            while (WHITESPACE.indexOf(c) != -1) { //!!
+                c = r.read();
+            }
             return sb.toString();
         }
 
