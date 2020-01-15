@@ -1,12 +1,9 @@
 package visualign;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -31,6 +28,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ColorPicker;
@@ -50,6 +48,9 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -74,6 +75,9 @@ public class QNLController implements ChangeListener<Number> {
     private Canvas ovlycnv;
 
     @FXML
+    private Canvas lblcnv;
+
+    @FXML
     private Slider opacitySlider;
 
     @FXML
@@ -87,7 +91,7 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     private RadioMenuItem debug;
-    
+
     @FXML
     private Spinner<Integer> spn;
     
@@ -124,12 +128,52 @@ public class QNLController implements ChangeListener<Number> {
 
     double mouseX;
     double mouseY;
+    boolean popbottom=true;
 
     @FXML
     void mouseMoved(MouseEvent event) {
         ovlycnv.requestFocus();
         mouseX = event.getX();
         mouseY = event.getY();
+        drawPop();
+    }
+    
+    private void drawPop() {
+        int h=(int)lblcnv.getHeight();
+        int w=(int)lblcnv.getWidth();
+        if(popbottom && mouseY>h*0.8)
+            popbottom=false;
+        else if(!popbottom && mouseY<h*0.2)
+            popbottom=true;
+        GraphicsContext gc=lblcnv.getGraphicsContext2D();
+        gc.clearRect(0, 0, w, h);
+        int mx = (int)mouseX - imgx;
+        int my = (int)mouseY - imgy;
+        
+        if(mx>=0 && my>=0 && mx<imgw && my<imgh) {
+            SegLabel l=null;
+            List<Triangle> triangles=slice.triangles;
+            double fx = mx * slice.width / imgw;
+            double fy = my * slice.height / imgh;
+            for (int i = 0; i < triangles.size(); i++) {
+                double t[] = triangles.get(i).transform(fx, fy);
+                if (t != null) {
+                    int xx = (int) (t[0] * x_overlay[0].length / slice.width);
+                    int yy = (int) (t[1] * x_overlay.length / slice.height);
+                    l=palette.fullmap.get(x_overlay[yy][xx]);
+                }
+            }
+//            gc.strokeText(""+nlovly[mx+my*imgw], 100, 100);
+            if(l!=null && l.index>0) {
+                gc.setFill(Color.rgb(l.red, l.green, l.blue));
+                gc.fillRect(0, popbottom?h-50:0, w, 50);
+                gc.setFill(Color.BLACK);
+                gc.setFont(Font.font("System",FontWeight.BOLD,30));
+                gc.setTextAlign(TextAlignment.CENTER);
+                gc.setTextBaseline(VPos.CENTER);
+                gc.fillText(l.name, w/2, popbottom?h-25:25);
+            }
+        }
     }
 
     double basex, basey;
@@ -181,12 +225,12 @@ public class QNLController implements ChangeListener<Number> {
             if (pick >= 0) return;
             double mx = (mouseX - imgx) * slice.width / imgw;
             double my = (mouseY - imgy) * slice.height / imgh;
-            boolean found = false;
+//            boolean found = false;
             for (int i = 0; i < triangles.size(); i++) {
                 double xy[] = triangles.get(i).transform(mx, my);
                 if (xy != null) {
                     markers.add(marker(xy[0], xy[1], mx, my));
-                    found = true;
+//                    found = true;
                     break;
                 }
             }
@@ -262,13 +306,16 @@ public class QNLController implements ChangeListener<Number> {
 
     int x_overlay[][];
     int fastoverlay[];
-
+    
     public void drawImage() {
-        if (slice == null)
-            return; // !!
-
+        GraphicsContext ctx = imgcnv.getGraphicsContext2D();
         int cw = (int) imgcnv.getWidth();
         int ch = (int) imgcnv.getHeight();
+        ctx.clearRect(0, 0, cw, ch);
+        
+        if (slice == null)
+            return; // !!
+        
         int iw = (int) image.getWidth();
         int ih = (int) image.getHeight();
 
@@ -286,77 +333,8 @@ public class QNLController implements ChangeListener<Number> {
         rgb=new int[imgw*imgh];
         nlovly=new int[imgw*imgh];
 
-        GraphicsContext ctx = imgcnv.getGraphicsContext2D();
-        ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(image, imgx, imgy, imgw, imgh);
-
-//        ctx.strokeRect(10, 10, cw - 20, ch - 20);
     }
-
-//    double slice.width;
-//    double slice.height;
-//    List<Triangle> triangles;
-
-//    public void triangulate() {
-//        triangles = new ArrayList<Triangle>();
-//        triangles.add(new Triangle(0, 1, 2, markers));
-//        triangles.add(new Triangle(1, 2, 3, markers));
-//        for (int i = 4; i < markers.size(); i++) {
-//            Marker m = markers.get(i);
-//            double x = m.nx;
-//            double y = m.ny;
-//            boolean found = false;
-//            for (int t = 0; t < triangles.size(); t++) {
-//                Triangle tri = triangles.get(t);
-//                if (tri.intri(x, y) != null) {
-//                    triangles.set(t, new Triangle(i, tri.a, tri.b, markers));
-//                    triangles.add(new Triangle(i, tri.a, tri.c, markers));
-//                    triangles.add(new Triangle(i, tri.b, tri.c, markers));
-//                    found = true;
-//                    break;
-//                }
-//            }
-//            if (!found)
-//                throw new RuntimeException();
-//            boolean flip;
-//            do {
-//                flip = false;
-//                for (int t = 0; t < triangles.size() && !flip; t++) {
-//                    Triangle tri = triangles.get(t);
-//                    for (int j = 0; j < markers.size() && !flip; j++)
-//                        if (j != tri.a && j != tri.b && j != tri.c) {
-//                            Marker P = markers.get(j);
-//                            if (tri.incirc(P.nx, P.ny)) {
-//                                Triangle ta = new Triangle(j, tri.b, tri.c, markers);
-//                                int idx = triangles.indexOf(ta);
-//                                if (idx >= 0) {
-//                                    triangles.set(t, new Triangle(tri.a, tri.b, j, markers));
-//                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, markers));
-//                                    flip = true;
-//                                    break;
-//                                }
-//                                Triangle tb = new Triangle(tri.a, j, tri.c, markers);
-//                                idx = triangles.indexOf(tb);
-//                                if (idx >= 0) {
-//                                    triangles.set(t, new Triangle(tri.a, tri.b, j, markers));
-//                                    triangles.set(idx, new Triangle(j, tri.b, tri.c, markers));
-//                                    flip = true;
-//                                    break;
-//                                }
-//                                Triangle tc = new Triangle(tri.a, tri.b, j, markers);
-//                                idx = triangles.indexOf(tc);
-//                                if (idx >= 0) {
-//                                    triangles.set(t, new Triangle(j, tri.b, tri.c, markers));
-//                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, markers));
-//                                    flip = true;
-//                                    break;
-//                                }
-//                            }
-//                        }
-//                }
-//            } while (flip);
-//        }
-//    }
 
     /*
      * Screen-space x: 0...imgx-1 y: 0...imgy-1
@@ -385,6 +363,7 @@ public class QNLController implements ChangeListener<Number> {
         if (debug.isSelected())
             drawDebug();
         drawPins();
+        drawPop();
     }
 
     public void drawOvly() {
@@ -466,16 +445,17 @@ public class QNLController implements ChangeListener<Number> {
     void debug(ActionEvent event) {
         reDraw();
     }
-
+    
     @FXML
     void exit(ActionEvent event) {
-
+        Platform.exit();
     }
 
     String current;
     Palette palette;
     Int32Slices slicer;
-    Path base;
+    Path baseFolder;
+    String filename;
 
     @FXML
     void open(ActionEvent event) throws Exception {
@@ -487,7 +467,9 @@ public class QNLController implements ChangeListener<Number> {
         File f = fc.showOpenDialog(stage);
         if (f != null) {
             // !! unload
-            base=f.getParentFile().toPath();
+            baseFolder=f.getParentFile().toPath();
+            filename=f.getName();
+            filename=filename.substring(0, filename.length()-5);
             series = new Series();
             try (FileReader fr = new FileReader(f)) {
                 Map<String, String> resolver = new HashMap<>();
@@ -526,56 +508,14 @@ public class QNLController implements ChangeListener<Number> {
         }
     }
     
-//    boolean lockload; //!!
     void loadView() {
-//        if(lockload)return;
-//        lockload=true;
-//        spn.setDisable(true);
-//        int temp=spnVal.getValue();
+        if(series==null)
+            return; //!!
         slice=series.slices.get(spnVal.getValue()-1);
-        image=new Image("file:"+base.resolve(slice.filename));
-        stage.setTitle("VisuAlign - NonLinear: "+slice.filename);
+        image=new Image("file:"+baseFolder.resolve(slice.filename));
+        setTitle(slice.filename);
+        slice.triangulate();
         drawImage();
-        
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                Double ouv[]=slice.anchoring.toArray(new Double[0]);
-//                x_overlay=slicer.getInt32Slice(ouv[0], ouv[1], ouv[2], ouv[3], ouv[4], ouv[5], ouv[6], ouv[7], ouv[8], false);
-//                fastoverlay=new int[x_overlay.length*x_overlay[0].length];
-//                for(int y=0;y<x_overlay.length;y++) {
-//                    int l[]=x_overlay[y];
-//                    for(int x=0;x<l.length;x++)
-//                        fastoverlay[x+y*l.length]=palette.fullmap.get(l[x]).remap;
-//                }
-//                slice.triangulate();
-//                Platform.runLater(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        reDraw();
-//                        //spn.setDisable(false);
-//                        spnVal.setValue(temp);
-//                        lockload=false;
-//                    }
-//                });
-//            }
-//        }).start();
-        
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                Thread.sleep(1000);
-//                }catch(Exception ex) {}
-//                Platform.runLater(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        vbox.setDisable(false);
-//                    }
-//                });
-//            }
-//        }).start();
-        
         Double ouv[]=slice.anchoring.toArray(new Double[0]);
         x_overlay=slicer.getInt32Slice(ouv[0], ouv[1], ouv[2], ouv[3], ouv[4], ouv[5], ouv[6], ouv[7], ouv[8], false);
         fastoverlay=new int[x_overlay.length*x_overlay[0].length];
@@ -584,15 +524,21 @@ public class QNLController implements ChangeListener<Number> {
             for(int x=0;x<l.length;x++)
                 fastoverlay[x+y*l.length]=palette.fullmap.get(l[x]).remap;
         }
-        
-        slice.triangulate();
         reDraw();
     }
 
-    @FXML
-    void save(ActionEvent event) {
+//    @FXML
+//    void save(ActionEvent event) throws IOException {
+//        File f=baseFolder.resolve(filename+".json").toFile();
+//        File b=baseFolder.resolve(filename+".bak.json").toFile();
+//        if(b.exists())
+//            System.out.println("delete bak:"+b.delete());
+//        System.out.println("create bak:"+f.renameTo(b));
+//        try(FileWriter fw=new FileWriter(f)){
+//            series.toJSON(fw);
+//        }
+//    }
 
-    }
     @FXML
     void exprt(ActionEvent event) throws IOException {
         DirectoryChooser dc=new DirectoryChooser();
@@ -682,7 +628,23 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     void close(ActionEvent event) {
-
+        if(series==null)return;
+        Alert a=new Alert(AlertType.WARNING,"Do you want to close series?",ButtonType.YES,ButtonType.NO);
+        a.showAndWait().ifPresent(b->{
+            if(b==ButtonType.YES) {
+                series=null;
+                slice=null;
+                baseFolder=null;
+                filename=null;
+                setTitle(null);
+                drawImage();
+                GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
+                ctx.clearRect(0, 0, imgcnv.getWidth(), imgcnv.getHeight());
+                spnVal.setMax(1);
+                imgw=0;
+                imgh=0;
+            }
+        });
     }
 
     @FXML
@@ -750,5 +712,16 @@ public class QNLController implements ChangeListener<Number> {
         });
     }
     
+    @FXML
+    void about(ActionEvent event) {
+        String text=title+"\n\nVisuAlign is developed at the Neural Systems Laboratory, Institute of Basic Medical Sciences, University of Oslo (Norway), with funding from the European Union’s Horizon 2020 Framework Programme for Research and Innovation under the Framework Partnership Agreement No. 650003 (HBP FPA).";
+        new Alert(AlertType.NONE, text, ButtonType.CLOSE).showAndWait();
+    }
+    
     Stage stage;
+    public void setTitle(String filename) {
+        stage.setTitle(filename==null?title:(title+": "+filename));
+    }
+    public static final String version="v0.7";
+    public static final String title="VisuAlign - NonLinear "+version;
 }

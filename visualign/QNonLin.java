@@ -14,7 +14,7 @@ public class QNonLin extends Application {
         Parent root=loader.load();
         QNLController c=(QNLController)loader.getController();
         c.stage=primaryStage;
-        primaryStage.setTitle("VisuAlign - NonLinear");
+        c.setTitle(null);
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
     }

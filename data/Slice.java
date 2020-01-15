@@ -39,7 +39,7 @@ public class Slice implements Comparable<Slice> {
             trimarkers.add(m);
             double x = m.get(2);
             double y = m.get(3);
-            boolean found = false;
+//            boolean found = false;
             for (int t = 0; t < triangles.size(); t++) {
                 Triangle tri = triangles.get(t);
 //                if (tri.intri(x, y) != null) {
@@ -47,7 +47,7 @@ public class Slice implements Comparable<Slice> {
                     triangles.set(t, new Triangle(i+4, tri.a, tri.b, trimarkers));
                     triangles.add(new Triangle(i+4, tri.a, tri.c, trimarkers));
                     triangles.add(new Triangle(i+4, tri.b, tri.c, trimarkers));
-                    found = true;
+//                    found = true;
                     break;
                 }
             }

@@ -25,9 +25,9 @@
           <Menu text="File">
             <items>
               <MenuItem onAction="#open" text="Open" />
-              <MenuItem onAction="#save" text="Save" disable="true" />
+              <!--<MenuItem onAction="#save" text="Save" />-->
               <MenuItem onAction="#saveas" text="Save As..." />
-              <MenuItem onAction="#close" text="Close" disable="true" />
+              <MenuItem onAction="#close" text="Close" />
               <MenuItem onAction="#exprt" text="Export..." />
               <SeparatorMenuItem />
               <MenuItem onAction="#exit" text="Exit" />
@@ -45,7 +45,7 @@
             </Menu>
           <Menu text="Help">
             <items>
-              <MenuItem text="About" />
+              <MenuItem onAction="#about" text="About" />
             </items>
           </Menu>
         </menus>
@@ -87,6 +87,7 @@
          <children>
             <Canvas fx:id="imgcnv" height="${pane.height}" width="${pane.width}" />
             <Canvas fx:id="ovlycnv" height="${pane.height}" width="${pane.width}" />
+            <Canvas fx:id="lblcnv" height="${pane.height}" width="${pane.width}" />
          </children>
       </Pane>
    </children>
