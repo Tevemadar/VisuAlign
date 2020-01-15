@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 import java.util.stream.IntStream;
 
 import javax.imageio.ImageIO;
@@ -459,15 +460,20 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     void open(ActionEvent event) throws Exception {
+        Preferences prefs=Preferences.userRoot().node("/no/uio/nesys/visualign");
+        File f=new File(prefs.get("lastDir", "/"));
         FileChooser fc = new FileChooser();
+        if(f.exists())
+            fc.setInitialDirectory(f);
         fc.setTitle("Pick JSON file");
         ExtensionFilter ef=new ExtensionFilter("QuickNII JSON files", "*.json");
         fc.getExtensionFilters().add(ef);
         //fc.setSelectedExtensionFilter(ef);
-        File f = fc.showOpenDialog(stage);
+        /*File*/ f = fc.showOpenDialog(stage);
         if (f != null) {
             // !! unload
             baseFolder=f.getParentFile().toPath();
+            prefs.put("lastDir", baseFolder.toString());
             filename=f.getName();
             filename=filename.substring(0, filename.length()-5);
             series = new Series();
@@ -542,6 +548,7 @@ public class QNLController implements ChangeListener<Number> {
     @FXML
     void exprt(ActionEvent event) throws IOException {
         DirectoryChooser dc=new DirectoryChooser();
+        dc.setInitialDirectory(baseFolder.toFile());
         dc.setTitle("Pick folder for exporting slices");
         File f=dc.showDialog(stage);
         if(f!=null) {
@@ -615,6 +622,7 @@ public class QNLController implements ChangeListener<Number> {
     @FXML
     void saveas(ActionEvent event) throws IOException {
         FileChooser fc = new FileChooser();
+        fc.setInitialDirectory(baseFolder.toFile());
         fc.setTitle("Pick JSON file");
         ExtensionFilter ef=new ExtensionFilter("JSON files", "*.json");
         fc.getExtensionFilters().add(ef);
