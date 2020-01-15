@@ -14,86 +14,121 @@ public class Slice implements Comparable<Slice> {
     public double height;
     public List<Double> anchoring = new ArrayList<>();
     public List<ArrayList<Double>> markers = new ArrayList<>();
-    
+
     public String toString() {
-        return "\n{\"filename\":\""+filename+"\",\"nr\":"+(int)nr+",\"width\":"+(int)width+",\"height\":"+(int)height
-                +(noanchoring?"":",\"anchoring\":"+anchoring)+(markers.size()>0?",\"markers\":"+markers:"")+"}";
+        return "\n{\"filename\":\"" + filename + "\",\"nr\":" + (int) nr + ",\"width\":" + (int) width + ",\"height\":"
+                + (int) height + (noanchoring ? "" : ",\"anchoring\":" + anchoring)
+                + (markers.size() > 0 ? ",\"markers\":" + markers : "") + "}";
     }
-    
+
     public List<List<Double>> trimarkers;
     public List<Triangle> triangles;
-    
+
     public void triangulate() {
 //        long start=System.currentTimeMillis();
-        trimarkers=new ArrayList<>();
-        trimarkers.add(marker(0,0));
+        trimarkers = new ArrayList<>();
+        trimarkers.add(marker(0, 0));
         trimarkers.add(marker(width, 0));
         trimarkers.add(marker(0, height));
         trimarkers.add(marker(width, height));
         triangles = new ArrayList<Triangle>();
         triangles.add(new Triangle(0, 1, 2, trimarkers));
         triangles.add(new Triangle(1, 2, 3, trimarkers));
-//        for (int i = 0; i < markers.size() && System.currentTimeMillis()<start+5000; i++) {
-        for (int i = 0; i < markers.size(); i++) {
-            List<Double> m = markers.get(i);
-            trimarkers.add(m);
+        byte edges[][] = new byte[markers.size() + 4][markers.size() + 4];
+        edges[0][1] = edges[0][2] = edges[1][2] = edges[1][3] = edges[2][3] = 2;
+
+        for (List<Double> m : markers) {
             double x = m.get(2);
             double y = m.get(3);
-//            boolean found = false;
-            for (int t = 0; t < triangles.size(); t++) {
-                Triangle tri = triangles.get(t);
-//                if (tri.intri(x, y) != null) {
-                if (tri.intri(x, y)!=null) {
-                    triangles.set(t, new Triangle(i+4, tri.a, tri.b, trimarkers));
-                    triangles.add(new Triangle(i+4, tri.a, tri.c, trimarkers));
-                    triangles.add(new Triangle(i+4, tri.b, tri.c, trimarkers));
-//                    found = true;
-                    break;
+            if (x >= 0 && y >= 0 && x <= width && y <= height) {
+                trimarkers.add(m);
+                for (int i = triangles.size() - 1; i >= 0; i--) {
+                    Triangle tri = triangles.get(i);
+                    if (tri.incirc(x, y)) {
+                        triangles.remove(i);
+                        edges[tri.a][tri.b]--;
+                        edges[tri.a][tri.c]--;
+                        edges[tri.b][tri.c]--;
+                    }
+                }
+                ArrayList<Triangle> newtriangles = new ArrayList<>();
+                for (int i = 0; i < edges.length; i++)
+                    for (int j = 0; j < edges.length; j++)
+                        if (edges[i][j] == 1) {
+                            Triangle tri = new Triangle(i, j, trimarkers.size() - 1, trimarkers);
+                            if (tri.decomp != null)
+                                newtriangles.add(tri);
+                        }
+                triangles.addAll(newtriangles);
+                for (Triangle tri : newtriangles) {
+                    edges[tri.a][tri.b]++;
+                    edges[tri.a][tri.c]++;
+                    edges[tri.b][tri.c]++;
                 }
             }
-//            if (!found)
-//                throw new RuntimeException();
-            boolean flip;
-            do {
-                flip = false;
-                for (int t = 0; t < triangles.size() && !flip; t++) {
-                    Triangle tri = triangles.get(t);
-                    for (int j = 0; j < trimarkers.size() && !flip; j++)
-                        if (j != tri.a && j != tri.b && j != tri.c) {
-                            List<Double> P = trimarkers.get(j);
-                            if (tri.incirc(P.get(2), P.get(3))) {
-                                Triangle ta = new Triangle(j, tri.b, tri.c, trimarkers);
-                                int idx = triangles.indexOf(ta);
-                                if (idx >= 0) {
-                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
-                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
-                                    flip = true;
-                                    break;
-                                }
-                                Triangle tb = new Triangle(tri.a, j, tri.c, trimarkers);
-                                idx = triangles.indexOf(tb);
-                                if (idx >= 0) {
-                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
-                                    triangles.set(idx, new Triangle(j, tri.b, tri.c, trimarkers));
-                                    flip = true;
-                                    break;
-                                }
-                                Triangle tc = new Triangle(tri.a, tri.b, j, trimarkers);
-                                idx = triangles.indexOf(tc);
-                                if (idx >= 0) {
-                                    triangles.set(t, new Triangle(j, tri.b, tri.c, trimarkers));
-                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
-                                    flip = true;
-                                    break;
-                                }
-                            }
-                        }
-                }
-//            } while (flip && System.currentTimeMillis()<start+5000);
-            } while (flip);
         }
+
+////        for (int i = 0; i < markers.size() && System.currentTimeMillis()<start+5000; i++) {
+//        for (int i = 0; i < markers.size(); i++) {
+//            List<Double> m = markers.get(i);
+//            trimarkers.add(m);
+//            double x = m.get(2);
+//            double y = m.get(3);
+////            boolean found = false;
+//            for (int t = 0; t < triangles.size(); t++) {
+//                Triangle tri = triangles.get(t);
+////                if (tri.intri(x, y) != null) {
+//                if (tri.intri(x, y)!=null) {
+//                    triangles.set(t, new Triangle(i+4, tri.a, tri.b, trimarkers));
+//                    triangles.add(new Triangle(i+4, tri.a, tri.c, trimarkers));
+//                    triangles.add(new Triangle(i+4, tri.b, tri.c, trimarkers));
+////                    found = true;
+//                    break;
+//                }
+//            }
+////            if (!found)
+////                throw new RuntimeException();
+//            boolean flip;
+//            do {
+//                flip = false;
+//                for (int t = 0; t < triangles.size() && !flip; t++) {
+//                    Triangle tri = triangles.get(t);
+//                    for (int j = 0; j < trimarkers.size() && !flip; j++)
+//                        if (j != tri.a && j != tri.b && j != tri.c) {
+//                            List<Double> P = trimarkers.get(j);
+//                            if (tri.incirc(P.get(2), P.get(3))) {
+//                                Triangle ta = new Triangle(j, tri.b, tri.c, trimarkers);
+//                                int idx = triangles.indexOf(ta);
+//                                if (idx >= 0) {
+//                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
+//                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
+//                                    flip = true;
+//                                    break;
+//                                }
+//                                Triangle tb = new Triangle(tri.a, j, tri.c, trimarkers);
+//                                idx = triangles.indexOf(tb);
+//                                if (idx >= 0) {
+//                                    triangles.set(t, new Triangle(tri.a, tri.b, j, trimarkers));
+//                                    triangles.set(idx, new Triangle(j, tri.b, tri.c, trimarkers));
+//                                    flip = true;
+//                                    break;
+//                                }
+//                                Triangle tc = new Triangle(tri.a, tri.b, j, trimarkers);
+//                                idx = triangles.indexOf(tc);
+//                                if (idx >= 0) {
+//                                    triangles.set(t, new Triangle(j, tri.b, tri.c, trimarkers));
+//                                    triangles.set(idx, new Triangle(tri.a, j, tri.c, trimarkers));
+//                                    flip = true;
+//                                    break;
+//                                }
+//                            }
+//                        }
+//                }
+////            } while (flip && System.currentTimeMillis()<start+5000);
+//            } while (flip);
+//        }
     }
-    
+
 //    public void triangulate() {
 //        trimarkers=new ArrayList<>();
 //        trimarkers.add(marker(0,0));
@@ -218,9 +253,10 @@ public class Slice implements Comparable<Slice> {
     }
 
     public boolean noanchoring;
+
     public boolean from(Estimator ests[]) {
         if (anchoring.size() == 0) {
-            noanchoring=true;
+            noanchoring = true;
             for (int i = 0; i < ests.length; i++)
                 anchoring.add(ests[i].get(nr));
             orthonormalize();

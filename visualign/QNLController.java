@@ -722,6 +722,6 @@ public class QNLController implements ChangeListener<Number> {
     public void setTitle(String filename) {
         stage.setTitle(filename==null?title:(title+": "+filename));
     }
-    public static final String version="v0.7";
+    public static final String version="v0.8";
     public static final String title="VisuAlign - NonLinear "+version;
 }
