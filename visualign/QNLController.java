@@ -161,7 +161,8 @@ public class QNLController implements ChangeListener<Number> {
                 if (t != null) {
                     int xx = (int) (t[0] * x_overlay[0].length / slice.width);
                     int yy = (int) (t[1] * x_overlay.length / slice.height);
-                    l=palette.fullmap.get(x_overlay[yy][xx]);
+                    if(xx>=0 && yy>=0 && xx<x_overlay[0].length && yy<x_overlay.length)
+                        l=palette.fullmap.get(x_overlay[yy][xx]);//!!
                 }
             }
 //            gc.strokeText(""+nlovly[mx+my*imgw], 100, 100);
@@ -349,8 +350,8 @@ public class QNLController implements ChangeListener<Number> {
             if (t != null) {
                 int xx = (int) (t[0] * x_overlay[0].length / slice.width);
                 int yy = (int) (t[1] * x_overlay.length / slice.height);
-//                if(xx<0 || yy<0 || xx>=overlay[0].length || yy>=overlay.length)
-//                    return 0;
+                if(xx<0 || yy<0 || xx>=x_overlay[0].length || yy>=x_overlay.length)
+                    return 0;
                 //return overlay[yy][xx];
                 return fastoverlay[xx+yy*x_overlay[0].length];
             }
@@ -587,7 +588,8 @@ public class QNLController implements ChangeListener<Number> {
                                     if (t != null) {
                                         int xx = (int) (t[0] * w / slice.width);
                                         int yy = (int) (t[1] * h / slice.height);
-                                        c=palette.fullmap.get(overlay[yy][xx]);
+                                        if(xx>=0 && yy>=0 && xx<overlay[0].length && yy<overlay.length)
+                                            c=palette.fullmap.get(overlay[yy][xx]);//!!
                                         break;
                                     }
                                 }

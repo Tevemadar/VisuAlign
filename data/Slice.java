@@ -5,6 +5,7 @@ import java.util.List;
 
 import math.Estimator;
 import nonlin.Triangle;
+
 import static data.Marker.marker;
 
 public class Slice implements Comparable<Slice> {
@@ -26,10 +27,14 @@ public class Slice implements Comparable<Slice> {
 
     public void triangulate() {
         trimarkers = new ArrayList<>();
-        trimarkers.add(marker(0, 0));
-        trimarkers.add(marker(width, 0));
-        trimarkers.add(marker(0, height));
-        trimarkers.add(marker(width, height));
+//        trimarkers.add(marker(0, 0));
+//        trimarkers.add(marker(width, 0));
+//        trimarkers.add(marker(0, height));
+//        trimarkers.add(marker(width, height));
+        trimarkers.add(marker(-width*0.1, -height*0.1));
+        trimarkers.add(marker(width*1.1, -height*0.1));
+        trimarkers.add(marker(-width*0.1, height*1.1));
+        trimarkers.add(marker(width*1.1, height*1.1));
         triangles = new ArrayList<Triangle>();
         triangles.add(new Triangle(0, 1, 2, trimarkers));
         triangles.add(new Triangle(1, 2, 3, trimarkers));
