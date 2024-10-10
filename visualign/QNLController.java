@@ -104,6 +104,9 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     private RadioMenuItem debug;
+    
+    @FXML
+    private RadioMenuItem hidepins;
 
     @FXML
     private Spinner<Integer> spn;
@@ -122,10 +125,11 @@ public class QNLController implements ChangeListener<Number> {
     double picky;
 
     void updatePick() {
-        if(slice==null)return;
-        List<ArrayList<Double>> markers=slice.markers;
         pick = -1;
         picked = null;
+        if(slice==null)return;
+        if(hidepins.isSelected())return;
+        List<ArrayList<Double>> markers=slice.markers;
         pickx = (mouseX - imgx) * slice.width / imgw;
         picky = (mouseY - imgy) * slice.height / imgh;
         double margin = slice.width * 10 / imgw;
@@ -227,6 +231,9 @@ public class QNLController implements ChangeListener<Number> {
             spnVal.increment(1);
             return;
         }
+        
+        if(hidepins.isSelected())
+        	return;
 
         List<ArrayList<Double>> markers=slice.markers;
         List<Triangle> triangles=slice.triangles;
@@ -455,6 +462,8 @@ public class QNLController implements ChangeListener<Number> {
     }
 
     private void drawPins() {
+    	if(hidepins.isSelected())
+    		return;
         GraphicsContext ctx = ovlycnv.getGraphicsContext2D();
         ctx.setStroke(pinColor.getValue());
         ctx.setLineWidth(3);
@@ -492,6 +501,11 @@ public class QNLController implements ChangeListener<Number> {
 
     @FXML
     void debug(ActionEvent event) {
+        reDraw();
+    }
+    
+    @FXML
+    void hidepins(ActionEvent event) {
         reDraw();
     }
     
