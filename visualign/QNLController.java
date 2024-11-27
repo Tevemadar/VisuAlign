@@ -232,6 +232,24 @@ public class QNLController implements ChangeListener<Number> {
             return;
         }
         
+        if(kc==KeyCode.PAGE_UP) {
+        	if(slice.layerindex<slice.filenames.size()-1) {
+        		slice.layerindex++;
+        		image=new Image("file:"+baseFolder.resolve(slice.filenames.get(slice.layerindex)));
+        		drawImage();
+        	}
+        	return;
+        }
+
+        if(kc==KeyCode.PAGE_DOWN) {
+        	if(slice.layerindex>0) {
+        		slice.layerindex--;
+        		image=new Image("file:"+baseFolder.resolve(slice.filenames.get(slice.layerindex)));
+        		drawImage();
+        	}
+        	return;
+        }
+        
         if(hidepins.isSelected())
         	return;
 
@@ -608,7 +626,7 @@ public class QNLController implements ChangeListener<Number> {
         if(series==null)
             return; //!!
         slice=series.slices.get(spnVal.getValue()-1);
-        image=new Image("file:"+baseFolder.resolve(slice.filename));
+       	image=new Image("file:"+baseFolder.resolve(slice.filename!=null?slice.filename:slice.filenames.get(slice.layerindex)));
         setTitle(slice.filename);
         slice.triangulate();
         drawImage();
